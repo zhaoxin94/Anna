@@ -7,6 +7,7 @@ import os
 import numpy as np
 from PIL import Image
 
+
 class Base_Dataset(data.Dataset):
     def __init__(self, root, partition):
         super(Base_Dataset, self).__init__()
@@ -17,15 +18,19 @@ class Base_Dataset(data.Dataset):
         std_pix = [0.229, 0.224, 0.225]
         normalize = transforms.Normalize(mean=mean_pix, std=std_pix)
         if self.partition == 'train':
-            self.transformer = transforms.Compose([transforms.Resize([224, 224]),
-                                                   transforms.RandomHorizontalFlip(),
-                                                   transforms.ToTensor(),
-                                                   normalize])
-        # transforms.RandomCrop(224) # augmentation for tiny-scale datsets, e.g., office31                                               
+            self.transformer = transforms.Compose([
+                transforms.Resize([224, 224]),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(), normalize
+            ])
+        # transforms.RandomCrop(224) # augmentation for tiny-scale datsets, e.g., office31
         else:
-            self.transformer = transforms.Compose([transforms.Resize([224, 224]),  # try resize to 224, instead of crop
-                                                   transforms.ToTensor(),
-                                                   normalize])
+            self.transformer = transforms.Compose([
+                transforms.Resize([224,
+                                   224]),  # try resize to 224, instead of crop
+                transforms.ToTensor(),
+                normalize
+            ])
         # transforms.CenterCrop(224) # augmentation for tiny-scale datsets, e.g., office31
 
     def __len__(self):
@@ -39,14 +44,16 @@ class Base_Dataset(data.Dataset):
         target_num = np.zeros(self.num_class)
         with open(self.source_path) as f:
             for ind, line in enumerate(f.readlines()):
-                image_dir, label = ' '.join(line.split(' ')[0:-1]), line.split(' ')[-1]
+                image_dir, label = ' '.join(
+                    line.split(' ')[0:-1]), line.split(' ')[-1]
                 label = label.strip()
                 source_image_list.append(self.root + '/' + image_dir)
                 source_label_list.append(int(label))
 
         with open(self.target_path) as f:
             for ind, line in enumerate(f.readlines()):
-                image_dir, label = ' '.join(line.split(' ')[0:-1]), line.split(' ')[-1]
+                image_dir, label = ' '.join(
+                    line.split(' ')[0:-1]), line.split(' ')[-1]
                 label = int(label.strip())
                 if openness is not None:
                     if label >= self.num_class + openness - 1:
@@ -57,7 +64,8 @@ class Base_Dataset(data.Dataset):
                 target_image_list.append(self.root + '/' + image_dir)
                 target_label_list.append(label)
 
-        if self.partition == 'train' and len(source_image_list) > len(target_image_list):
+        if self.partition == 'train' and len(source_image_list) > len(
+                target_image_list):
             k = int(len(source_image_list) / len(target_image_list)) + 1
             target_image_list *= k
             target_label_list *= k
@@ -88,17 +96,28 @@ class Base_Dataset(data.Dataset):
             confidence = 0
         return img_s, lbl_s, img_t, lbl_t, (pse_lbl, confidence)
 
+
 class Home_Dataset(Base_Dataset):
-    def __init__(self, root, partition, source='A', target='R', label_flag=None, confidence=None, openness=None):
+    def __init__(self,
+                 root,
+                 partition,
+                 source='A',
+                 target='R',
+                 label_flag=None,
+                 confidence=None,
+                 openness=None):
         # openness: In fact refer to [1 - known_num / (known_num + unknown_num)], here refer to the number of unknown
         super(Home_Dataset, self).__init__(root, partition)
         src_name, tar_name = self.getFilePath(source, target)
         self.source_path = os.path.join('data', src_name)
         self.target_path = os.path.join('data', tar_name)
-        self.class_name = ['Alarm_Clock', 'Backpack', 'Batteries', 'Bed', 'Bike', 'Bottle', 'Bucket', 'Calculator',
-                           'Calendar', 'Candles', 'Chair', 'Clipboards', 'Computer', 'Couch', 'Curtains', 'Desk_Lamp',
-                           'Drill', 'Eraser', 'Exit_Sign', 'Fan', 'File_Cabinet', 'Flipflops', 'Flowers', 'Folder',
-                           'Fork', 'unk']
+        self.class_name = [
+            'Alarm_Clock', 'Backpack', 'Batteries', 'Bed', 'Bike', 'Bottle',
+            'Bucket', 'Calculator', 'Calendar', 'Candles', 'Chair',
+            'Clipboards', 'Computer', 'Couch', 'Curtains', 'Desk_Lamp',
+            'Drill', 'Eraser', 'Exit_Sign', 'Fan', 'File_Cabinet', 'Flipflops',
+            'Flowers', 'Folder', 'Fork', 'unk'
+        ]
         self.num_class = len(self.class_name)
         self.label_flag = label_flag
         self.confidence = confidence
@@ -130,4 +149,53 @@ class Home_Dataset(Base_Dataset):
             tar_name = 'office_home/realworld_t.txt'
         else:
             print("Unknown Target Type, only supports A C P R.")
+        return src_name, tar_name
+
+
+class CS_Dataset(Base_Dataset):
+    def __init__(self,
+                 root,
+                 partition,
+                 source='A',
+                 target='U',
+                 label_flag=None,
+                 confidence=None,
+                 openness=None):
+        # openness: In fact refer to [1 - known_num / (known_num + unknown_num)], here refer to the number of unknown
+        super(CS_Dataset, self).__init__(root, partition)
+        src_name, tar_name = self.getFilePath(source, target)
+        self.source_path = os.path.join('data', src_name)
+        self.target_path = os.path.join('data', tar_name)
+        self.class_name = [
+            'Airfield', 'Anchorage', 'Beach', 'Dense_Residential', 'Farm',
+            'Flyover', 'Forest', 'Game_Space', 'Parking_Space', 'unk'
+        ]
+        self.num_class = len(self.class_name)
+        self.label_flag = label_flag
+        self.confidence = confidence
+        self.source_image, self.source_label, self.target_image, self.target_label, self.target_number = self.load_dataset(
+            openness, label_flag)
+
+        if self.label_flag is not None:
+            self.label_flag = label_flag
+
+    def getFilePath(self, source, target):
+
+        if source == 'A':
+            src_name = 'cs/AID_s.txt'
+        elif source == 'U':
+            src_name = 'cs/UCM_s.txt'
+        elif source == 'N':
+            src_name = 'cs/NWPU_s.txt'
+        else:
+            print("Unknown Source Type, only supports A U N.")
+        
+        if target == 'A':
+            tar_name = 'cs/AID_t.txt'
+        elif target == 'U':
+            tar_name = 'cs/UCM_t.txt'
+        elif target == 'N':
+            tar_name = 'cs/NWPU_t.txt'
+        else:
+            print("Unknown Target Type, only supports A U N.")
         return src_name, tar_name
